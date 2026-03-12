@@ -7,46 +7,73 @@ exports.handler = async function(event, context) {
   }
 
   const API_TOKEN = '9087f914ada0489b766a4301cfbe33992452248f';
-  const API_URL = 'https://easyverein.com/api/v1.7/member';
+  
+  // Try both API versions
+  const versions = [
+    { version: 'v2.0', url: 'https://easyverein.com/api/v2.0/member' },
+    { version: 'v1.7', url: 'https://easyverein.com/api/v1.7/member' }
+  ];
 
-  try {
-    const response = await fetch(API_URL, {
-      headers: {
-        'Authorization': 'Token ' + API_TOKEN,
-        'Accept': 'application/json'
+  let lastError = null;
+
+  for (const api of versions) {
+    try {
+      console.log('Trying API version:', api.version);
+      
+      const response = await fetch(api.url, {
+        headers: {
+          'Authorization': 'Token ' + API_TOKEN,
+          'Accept': 'application/json'
+        }
+      });
+
+      console.log('Response status:', response.status);
+
+      if (response.status === 401) {
+        console.log('401 error with', api.version, '- trying next version');
+        lastError = 'Authentication failed with ' + api.version;
+        continue;
       }
-    });
 
-    if (!response.ok) {
-      throw new Error('API returned ' + response.status);
+      if (!response.ok) {
+        console.log('API', api.version, 'returned', response.status);
+        lastError = 'HTTP ' + response.status + ' from ' + api.version;
+        continue;
+      }
+
+      const data = await response.json();
+      console.log('Success with', api.version, '- members count:', Array.isArray(data) ? data.length : 'unknown');
+
+      return {
+        statusCode: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS'
+        },
+        body: JSON.stringify(data)
+      };
+
+    } catch (error) {
+      console.error('Error with', api.version, ':', error.message);
+      lastError = error.message;
     }
-
-    const data = await response.json();
-
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS'
-      },
-      body: JSON.stringify(data)
-    };
-
-  } catch (error) {
-    console.error('Error fetching from easyverein:', error);
-    
-    return {
-      statusCode: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      },
-      body: JSON.stringify({ 
-        error: 'Failed to fetch members',
-        message: error.message 
-      })
-    };
   }
+
+  // All versions failed
+  console.error('All API versions failed. Last error:', lastError);
+  
+  return {
+    statusCode: 500,
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*'
+    },
+    body: JSON.stringify({ 
+      error: 'Failed to fetch members from all API versions',
+      message: lastError,
+      tried: ['v2.0', 'v1.7']
+    })
+  };
 };
