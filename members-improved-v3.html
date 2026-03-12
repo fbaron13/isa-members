@@ -330,27 +330,48 @@
         async function loadMembers() {
             try {
                 const res = await fetch('/.netlify/functions/members');
-                allMembers = await res.json();
+                
+                if (!res.ok) {
+                    throw new Error('HTTP ' + res.status);
+                }
+                
+                const data = await res.json();
+                console.log('Response type:', typeof data);
+                console.log('Is array?', Array.isArray(data));
+                
+                // Handle different response structures
+                if (Array.isArray(data)) {
+                    allMembers = data;
+                } else if (data.results) {
+                    allMembers = data.results;
+                } else if (data.data) {
+                    allMembers = data.data;
+                } else if (data.members) {
+                    allMembers = data.members;
+                } else if (data.error) {
+                    throw new Error(data.error + ': ' + data.message);
+                } else {
+                    console.error('Unknown response structure:', data);
+                    throw new Error('Invalid response format');
+                }
                 
                 console.log('Loaded', allMembers.length, 'members');
                 
                 // Filter: Only keep members with complete contact data
                 companies = allMembers.filter(m => {
                     const cd = m.contactDetailsData || {};
-                    // Must have company name AND (city OR companyCity) AND (email OR phone)
+                    // Must have company name AND (email OR phone)
                     return cd.companyName && 
                            cd.companyName.trim() !== '' &&
-                           (cd.companyCity || cd.city) &&
                            (cd.companyEmail || cd.companyPhone || m.emailOrUserName);
                 });
                 
                 individuals = allMembers.filter(m => {
                     const cd = m.contactDetailsData || {};
-                    // Must NOT be company AND have city AND zip AND (email OR phone)
+                    // Must NOT be company AND have (email OR phone)
                     const isNotCompany = !cd.companyName || cd.companyName.trim() === '';
-                    const hasLocation = cd.city && cd.zip;
                     const hasContact = cd.privateEmail || cd.privatePhone || m.emailOrUserName;
-                    return isNotCompany && hasLocation && hasContact;
+                    return isNotCompany && hasContact;
                 });
                 
                 console.log('Valid companies:', companies.length, 'Valid individuals:', individuals.length);
