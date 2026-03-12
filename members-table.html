@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ISA Members Directory</title>
+    <title>ISA Germany - Mitgliederverzeichnis</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -14,26 +14,31 @@
         
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: #f8f9fa;
+            background: transparent;
             color: #1a1a1a;
-            padding: 40px 20px;
         }
         
         .container {
             max-width: 1400px;
             margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            margin-bottom: 40px;
         }
         
         h1 {
-            font-size: 2.5rem;
+            font-size: 2rem;
             margin-bottom: 10px;
-            color: #1a1a1a;
         }
         
-        .subtitle {
-            color: #666;
-            margin-bottom: 40px;
-            font-size: 1.1rem;
+        h2 {
+            font-size: 1.5rem;
+            margin: 40px 0 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #2d5016;
+            color: #2d5016;
         }
         
         .search-box {
@@ -49,35 +54,114 @@
             font-size: 15px;
         }
         
-        .stats {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 30px;
+        .search-box input:focus {
+            outline: none;
+            border-color: #2d5016;
         }
         
-        .stat {
+        /* Company Cards */
+        .company-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 24px;
+            margin-bottom: 60px;
+        }
+        
+        .company-card {
             background: white;
-            padding: 20px 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid #e0e0e0;
+            transition: all 0.3s;
         }
         
-        .stat-number {
+        .company-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            border-color: #2d5016;
+        }
+        
+        .company-header {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+            align-items: center;
+        }
+        
+        .company-logo {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            background: white;
+        }
+        
+        .company-logo-placeholder {
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            border: 2px dashed #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-size: 2rem;
+            color: #ccc;
+        }
+        
+        .company-info {
+            flex: 1;
+        }
+        
+        .company-name {
+            font-size: 1.2rem;
             font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+        
+        .company-name a {
+            color: #1a1a1a;
+            text-decoration: none;
+        }
+        
+        .company-name a:hover {
             color: #2d5016;
         }
         
-        .stat-label {
+        .company-location {
             color: #666;
             font-size: 0.9rem;
         }
         
+        .company-contacts {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .contact-item a {
+            color: #2d5016;
+            text-decoration: none;
+        }
+        
+        .contact-item a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Individual Table */
         .table-container {
             background: white;
             border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            border: 1px solid #e0e0e0;
         }
         
         table {
@@ -94,16 +178,22 @@
             padding: 16px;
             text-align: left;
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
+            text-transform: uppercase;
         }
         
         td {
-            padding: 16px;
+            padding: 14px 16px;
             border-bottom: 1px solid #f0f0f0;
+            font-size: 0.9rem;
         }
         
-        tr:hover {
+        tbody tr:hover {
             background: #f8f9fa;
+        }
+        
+        tbody tr:last-child td {
+            border-bottom: none;
         }
         
         .loading {
@@ -124,112 +214,247 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+        
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #2d5016;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.85rem;
+            margin-top: 4px;
+        }
+        
+        @media (max-width: 768px) {
+            .company-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats {
+                flex-direction: column;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Mitgliederverzeichnis</h1>
-        <p class="subtitle">ISA Germany</p>
+        <div class="header">
+            <h1>Mitgliederverzeichnis</h1>
+        </div>
         
         <div class="stats">
             <div class="stat">
                 <div class="stat-number" id="total">-</div>
-                <div class="stat-label">Mitglieder</div>
+                <div class="stat-label">Gesamt</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="companies-count">-</div>
+                <div class="stat-label">Firmenmitglieder</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="individuals-count">-</div>
+                <div class="stat-label">Einzelmitglieder</div>
             </div>
         </div>
         
         <div class="search-box">
-            <input type="text" id="search" placeholder="Suchen..." oninput="filterTable()">
+            <input type="text" id="search" placeholder="Suche nach Name, Stadt..." oninput="filterMembers()">
         </div>
         
         <div id="loading" class="loading">
             <div class="loading-spinner"></div>
-            <p>Laden...</p>
+            <p>Mitgliederdaten werden geladen...</p>
         </div>
         
-        <div id="table-container" class="table-container" style="display: none;">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Nr.</th>
-                        <th>Name</th>
-                        <th>Stadt</th>
-                        <th>Email</th>
-                        <th>Telefon</th>
-                    </tr>
-                </thead>
-                <tbody id="tbody"></tbody>
-            </table>
+        <div id="content" style="display: none;">
+            <h2>Firmenmitglieder</h2>
+            <div id="companies" class="company-grid"></div>
+            
+            <h2>Einzelmitglieder</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>PLZ</th>
+                            <th>Stadt</th>
+                            <th>Telefon</th>
+                            <th>Email</th>
+                        </tr>
+                    </thead>
+                    <tbody id="individuals"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <script>
-        let members = [];
+        let allMembers = [];
+        let companies = [];
+        let individuals = [];
 
         async function loadMembers() {
             try {
                 const res = await fetch('/.netlify/functions/members');
-                members = await res.json();
+                allMembers = await res.json();
                 
-                console.log('First member:', members[0]);
+                console.log('Loaded', allMembers.length, 'members');
                 
-                document.getElementById('total').textContent = members.length;
-                renderTable();
+                // Separate companies and individuals
+                companies = allMembers.filter(m => {
+                    const cd = m.contactDetailsData || {};
+                    return cd.companyName && cd.companyName.trim() !== '';
+                });
+                
+                individuals = allMembers.filter(m => {
+                    const cd = m.contactDetailsData || {};
+                    return !cd.companyName || cd.companyName.trim() === '';
+                });
+                
+                console.log('Companies:', companies.length, 'Individuals:', individuals.length);
+                
+                updateStats();
+                renderMembers();
                 
                 document.getElementById('loading').style.display = 'none';
-                document.getElementById('table-container').style.display = 'block';
+                document.getElementById('content').style.display = 'block';
+                
             } catch (e) {
-                alert('Fehler: ' + e.message);
+                alert('Fehler beim Laden: ' + e.message);
+                console.error(e);
             }
         }
 
-        function renderTable() {
-            const tbody = document.getElementById('tbody');
-            const search = document.getElementById('search').value.toLowerCase();
-            
-            tbody.innerHTML = members
-                .filter(m => {
-                    const cd = m.contactDetailsData || {};
-                    const searchStr = [
-                        cd.name,
-                        cd.companyName,
-                        cd.city,
-                        cd.companyCity,
-                        m.emailOrUserName,
-                        cd.companyEmail,
-                        cd.companyPhone
-                    ].join(' ').toLowerCase();
-                    return searchStr.includes(search);
-                })
-                .map(m => {
-                    const cd = m.contactDetailsData || {};
-                    
-                    // Use companyName if it exists, otherwise use firstName + familyName
-                    const name = cd.companyName || cd.name || [cd.firstName, cd.familyName].filter(Boolean).join(' ') || 'Unbekannt';
-                    
-                    // Use companyCity if regular city is empty
-                    const city = cd.companyCity || cd.city || '-';
-                    
-                    // Email priority: emailOrUserName, then companyEmail, then privateEmail
-                    const email = m.emailOrUserName || cd.companyEmail || cd.privateEmail || '-';
-                    
-                    // Phone priority: companyPhone, then mobilePhone, then privatePhone
-                    const phone = cd.companyPhone || cd.mobilePhone || cd.privatePhone || '-';
-                    
-                    return `
-                        <tr>
-                            <td>${m.membershipNumber || m.id}</td>
-                            <td><strong>${name}</strong></td>
-                            <td>${city}</td>
-                            <td>${email !== '-' ? '<a href="mailto:' + email + '">' + email + '</a>' : '-'}</td>
-                            <td>${phone !== '-' ? '<a href="tel:' + phone + '">' + phone + '</a>' : '-'}</td>
-                        </tr>
-                    `;
-                }).join('');
+        function updateStats() {
+            document.getElementById('total').textContent = allMembers.length;
+            document.getElementById('companies-count').textContent = companies.length;
+            document.getElementById('individuals-count').textContent = individuals.length;
         }
 
-        function filterTable() {
-            renderTable();
+        function renderMembers() {
+            renderCompanies();
+            renderIndividuals();
+        }
+
+        function renderCompanies() {
+            const container = document.getElementById('companies');
+            const search = document.getElementById('search').value.toLowerCase();
+            
+            const filtered = companies.filter(m => {
+                const cd = m.contactDetailsData || {};
+                const searchStr = [
+                    cd.companyName,
+                    cd.companyCity,
+                    cd.companyZip,
+                    cd.companyEmail,
+                    cd.companyPhone
+                ].join(' ').toLowerCase();
+                return searchStr.includes(search);
+            });
+            
+            container.innerHTML = filtered.map(m => {
+                const cd = m.contactDetailsData || {};
+                const name = cd.companyName || 'Unbekannt';
+                const zip = cd.companyZip || '';
+                const city = cd.companyCity || '';
+                const email = cd.companyEmail || m.emailOrUserName || '';
+                const phone = cd.companyPhone || cd.mobilePhone || '';
+                const website = cd.companyWebsite || '';
+                const logo = m._profilePicture || '';
+                
+                return `
+                    <div class="company-card">
+                        <div class="company-header">
+                            ${logo ? 
+                                `<img src="${logo}" alt="${name}" class="company-logo">` :
+                                `<div class="company-logo-placeholder">🏢</div>`
+                            }
+                            <div class="company-info">
+                                <div class="company-name">
+                                    ${website ? 
+                                        `<a href="${website}" target="_blank">${name}</a>` :
+                                        name
+                                    }
+                                </div>
+                                <div class="company-location">${zip} ${city}</div>
+                            </div>
+                        </div>
+                        <div class="company-contacts">
+                            ${phone ? `
+                                <div class="contact-item">
+                                    📞 <a href="tel:${phone}">${phone}</a>
+                                </div>
+                            ` : ''}
+                            ${email ? `
+                                <div class="contact-item">
+                                    ✉️ <a href="mailto:${email}">${email}</a>
+                                </div>
+                            ` : ''}
+                            ${website ? `
+                                <div class="contact-item">
+                                    🌐 <a href="${website}" target="_blank">Website</a>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderIndividuals() {
+            const tbody = document.getElementById('individuals');
+            const search = document.getElementById('search').value.toLowerCase();
+            
+            const filtered = individuals.filter(m => {
+                const cd = m.contactDetailsData || {};
+                const searchStr = [
+                    cd.firstName,
+                    cd.familyName,
+                    cd.city,
+                    cd.zip,
+                    cd.privateEmail,
+                    cd.privatePhone
+                ].join(' ').toLowerCase();
+                return searchStr.includes(search);
+            });
+            
+            tbody.innerHTML = filtered.map(m => {
+                const cd = m.contactDetailsData || {};
+                const name = [cd.firstName, cd.familyName].filter(Boolean).join(' ') || cd.name || 'Unbekannt';
+                const zip = cd.zip || '';
+                const city = cd.city || '';
+                const email = cd.privateEmail || m.emailOrUserName || '';
+                const phone = cd.privatePhone || cd.mobilePhone || '';
+                
+                return `
+                    <tr>
+                        <td><strong>${name}</strong></td>
+                        <td>${zip}</td>
+                        <td>${city}</td>
+                        <td>${phone ? `<a href="tel:${phone}">${phone}</a>` : '-'}</td>
+                        <td>${email ? `<a href="mailto:${email}">${email}</a>` : '-'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterMembers() {
+            renderMembers();
         }
 
         loadMembers();
