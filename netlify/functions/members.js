@@ -12,13 +12,13 @@ exports.handler = async function(event, context) {
   try {
     const response = await fetch(API_URL, {
       headers: {
-        'Authorization': `Token ${API_TOKEN}`,
+        'Authorization': 'Token ' + API_TOKEN,
         'Accept': 'application/json'
       }
     });
 
     if (!response.ok) {
-      throw new Error(`API returned ${response.status}`);
+      throw new Error('API returned ' + response.status);
     }
 
     const data = await response.json();
@@ -35,7 +35,7 @@ exports.handler = async function(event, context) {
     };
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error fetching from easyverein:', error);
     
     return {
       statusCode: 500,
@@ -50,15 +50,3 @@ exports.handler = async function(event, context) {
     };
   }
 };
-```
-
-3. Click "Commit changes"
-
-**Your GitHub repo should now have:**
-```
-isa-members/
-├── index.html
-├── netlify.toml
-└── netlify/
-    └── functions/
-        └── members.js
