@@ -190,15 +190,31 @@
             tbody.innerHTML = members
                 .filter(m => {
                     const cd = m.contactDetailsData || {};
-                    const str = JSON.stringify(cd).toLowerCase();
-                    return str.includes(search);
+                    const searchStr = [
+                        cd.name,
+                        cd.companyName,
+                        cd.city,
+                        cd.companyCity,
+                        m.emailOrUserName,
+                        cd.companyEmail,
+                        cd.companyPhone
+                    ].join(' ').toLowerCase();
+                    return searchStr.includes(search);
                 })
                 .map(m => {
                     const cd = m.contactDetailsData || {};
-                    const name = cd.companyName || [cd.firstName, cd.familyName].filter(Boolean).join(' ') || 'Unknown';
-                    const city = cd.city || '-';
-                    const email = m.emailOrUserName || cd.email || '-';
-                    const phone = cd.phone || cd.privatePhone || cd.mobilePhone || '-';
+                    
+                    // Use companyName if it exists, otherwise use firstName + familyName
+                    const name = cd.companyName || cd.name || [cd.firstName, cd.familyName].filter(Boolean).join(' ') || 'Unbekannt';
+                    
+                    // Use companyCity if regular city is empty
+                    const city = cd.companyCity || cd.city || '-';
+                    
+                    // Email priority: emailOrUserName, then companyEmail, then privateEmail
+                    const email = m.emailOrUserName || cd.companyEmail || cd.privateEmail || '-';
+                    
+                    // Phone priority: companyPhone, then mobilePhone, then privatePhone
+                    const phone = cd.companyPhone || cd.mobilePhone || cd.privatePhone || '-';
                     
                     return `
                         <tr>
