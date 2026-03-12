@@ -24,13 +24,9 @@
             padding: 20px;
         }
         
-        .header {
-            margin-bottom: 40px;
-        }
-        
         h1 {
             font-size: 2rem;
-            margin-bottom: 10px;
+            margin-bottom: 40px;
         }
         
         h2 {
@@ -59,12 +55,11 @@
             border-color: #2d5016;
         }
         
-        /* Company Cards */
         .company-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
             gap: 24px;
-            margin-bottom: 60px;
+            margin-bottom: 20px;
         }
         
         .company-card {
@@ -156,7 +151,29 @@
             text-decoration: underline;
         }
         
-        /* Individual Table */
+        .show-more-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .show-more-btn {
+            background: #2d5016;
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .show-more-btn:hover {
+            background: #1f3910;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(45, 80, 22, 0.3);
+        }
+        
         .table-container {
             background: white;
             border-radius: 12px;
@@ -253,9 +270,7 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>Mitgliederverzeichnis</h1>
-        </div>
+        <h1>Mitgliederverzeichnis</h1>
         
         <div class="stats">
             <div class="stat">
@@ -284,6 +299,9 @@
         <div id="content" style="display: none;">
             <h2>Firmenmitglieder</h2>
             <div id="companies" class="company-grid"></div>
+            <div id="show-more-container" class="show-more-container" style="display: none;">
+                <button class="show-more-btn" onclick="showAllCompanies()">Mehr anzeigen</button>
+            </div>
             
             <h2>Einzelmitglieder</h2>
             <div class="table-container">
@@ -307,6 +325,7 @@
         let allMembers = [];
         let companies = [];
         let individuals = [];
+        let showingAllCompanies = false;
 
         async function loadMembers() {
             try {
@@ -315,18 +334,26 @@
                 
                 console.log('Loaded', allMembers.length, 'members');
                 
-                // Separate companies and individuals
+                // Filter: Only keep members with complete contact data
                 companies = allMembers.filter(m => {
                     const cd = m.contactDetailsData || {};
-                    return cd.companyName && cd.companyName.trim() !== '';
+                    // Must have company name AND (city OR companyCity) AND (email OR phone)
+                    return cd.companyName && 
+                           cd.companyName.trim() !== '' &&
+                           (cd.companyCity || cd.city) &&
+                           (cd.companyEmail || cd.companyPhone || m.emailOrUserName);
                 });
                 
                 individuals = allMembers.filter(m => {
                     const cd = m.contactDetailsData || {};
-                    return !cd.companyName || cd.companyName.trim() === '';
+                    // Must NOT be company AND have city AND zip AND (email OR phone)
+                    const isNotCompany = !cd.companyName || cd.companyName.trim() === '';
+                    const hasLocation = cd.city && cd.zip;
+                    const hasContact = cd.privateEmail || cd.privatePhone || m.emailOrUserName;
+                    return isNotCompany && hasLocation && hasContact;
                 });
                 
-                console.log('Companies:', companies.length, 'Individuals:', individuals.length);
+                console.log('Valid companies:', companies.length, 'Valid individuals:', individuals.length);
                 
                 updateStats();
                 renderMembers();
@@ -341,7 +368,7 @@
         }
 
         function updateStats() {
-            document.getElementById('total').textContent = allMembers.length;
+            document.getElementById('total').textContent = companies.length + individuals.length;
             document.getElementById('companies-count').textContent = companies.length;
             document.getElementById('individuals-count').textContent = individuals.length;
         }
@@ -354,12 +381,16 @@
         function renderCompanies() {
             const container = document.getElementById('companies');
             const search = document.getElementById('search').value.toLowerCase();
+            const isSearching = search.trim() !== '';
             
             const filtered = companies.filter(m => {
+                if (!isSearching) return true; // Show all if not searching
+                
                 const cd = m.contactDetailsData || {};
                 const searchStr = [
                     cd.companyName,
                     cd.companyCity,
+                    cd.city,
                     cd.companyZip,
                     cd.companyEmail,
                     cd.companyPhone
@@ -367,11 +398,20 @@
                 return searchStr.includes(search);
             });
             
-            container.innerHTML = filtered.map(m => {
+            // Calculate items per row (assume ~3 cards per row at 350px min-width)
+            const itemsPerRow = 3;
+            const initialRows = 2;
+            const initialCount = itemsPerRow * initialRows;
+            
+            // Show limited or all based on state and search
+            const displayCount = (showingAllCompanies || isSearching) ? filtered.length : Math.min(initialCount, filtered.length);
+            const displayMembers = filtered.slice(0, displayCount);
+            
+            container.innerHTML = displayMembers.map(m => {
                 const cd = m.contactDetailsData || {};
-                const name = cd.companyName || 'Unbekannt';
-                const zip = cd.companyZip || '';
-                const city = cd.companyCity || '';
+                const name = cd.companyName;
+                const zip = cd.companyZip || cd.zip || '';
+                const city = cd.companyCity || cd.city || '';
                 const email = cd.companyEmail || m.emailOrUserName || '';
                 const phone = cd.companyPhone || cd.mobilePhone || '';
                 const website = cd.companyWebsite || '';
@@ -414,6 +454,14 @@
                     </div>
                 `;
             }).join('');
+            
+            // Show/hide "Show more" button
+            const showMoreBtn = document.getElementById('show-more-container');
+            if (!isSearching && filtered.length > initialCount && !showingAllCompanies) {
+                showMoreBtn.style.display = 'block';
+            } else {
+                showMoreBtn.style.display = 'none';
+            }
         }
 
         function renderIndividuals() {
@@ -421,6 +469,8 @@
             const search = document.getElementById('search').value.toLowerCase();
             
             const filtered = individuals.filter(m => {
+                if (!search.trim()) return true;
+                
                 const cd = m.contactDetailsData || {};
                 const searchStr = [
                     cd.firstName,
@@ -436,8 +486,8 @@
             tbody.innerHTML = filtered.map(m => {
                 const cd = m.contactDetailsData || {};
                 const name = [cd.firstName, cd.familyName].filter(Boolean).join(' ') || cd.name || 'Unbekannt';
-                const zip = cd.zip || '';
-                const city = cd.city || '';
+                const zip = cd.zip;
+                const city = cd.city;
                 const email = cd.privateEmail || m.emailOrUserName || '';
                 const phone = cd.privatePhone || cd.mobilePhone || '';
                 
@@ -453,7 +503,14 @@
             }).join('');
         }
 
+        function showAllCompanies() {
+            showingAllCompanies = true;
+            renderCompanies();
+        }
+
         function filterMembers() {
+            // Reset show all when searching
+            showingAllCompanies = false;
             renderMembers();
         }
 
