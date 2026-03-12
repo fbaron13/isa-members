@@ -51,14 +51,25 @@ exports.handler = async function(event, context) {
       throw new Error('API returned non-JSON response');
     }
 
-    const members = await response.json();
+    const data = await response.json();
     console.log('Parsed JSON successfully');
-    console.log('Type of response:', typeof members);
-    console.log('Is array?', Array.isArray(members));
-    console.log('Member count:', members.length);
+    console.log('Type of response:', typeof data);
+    console.log('Is array?', Array.isArray(data));
+    
+    if (typeof data === 'object' && !Array.isArray(data)) {
+      console.log('Response is object with keys:', Object.keys(data));
+      console.log('Keys detail:', JSON.stringify(Object.keys(data)));
+    }
+    
+    // Try different possible structures
+    const members = Array.isArray(data) ? data : 
+                   (data.results || data.data || data.members || data.items || []);
+    
+    console.log('Extracted member count:', members.length);
 
     if (!Array.isArray(members) || members.length === 0) {
-      console.error('Invalid response format');
+      console.error('Could not extract members array');
+      console.error('Data structure:', JSON.stringify(data).substring(0, 500));
       throw new Error('No members in response');
     }
 
