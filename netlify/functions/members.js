@@ -6,7 +6,7 @@ exports.handler = async function(event, context) {
     };
   }
 
-  const API_TOKEN = '9087f914ada0489b766a4301cfbe33992452248f';
+  const API_TOKEN = '67ee65a0c5ae7ccfa2c9fb147cbc373a15b23614';
   
   // Try both API versions
   const versions = [
