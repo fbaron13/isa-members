@@ -24,8 +24,24 @@ exports.handler = async function(event, context) {
       throw new Error('API returned status ' + response.status);
     }
 
-    const members = await response.json();
+    const data = await response.json();
+    console.log('Response type:', typeof data);
+    console.log('Is array?', Array.isArray(data));
+    
+    if (data && typeof data === 'object') {
+      console.log('Response keys:', Object.keys(data));
+      console.log('Has results?', !!data.results);
+      console.log('Has data?', !!data.data);
+    }
+    
+    const members = Array.isArray(data) ? data : (data.results || data.data || []);
     console.log('Got', members.length, 'member records');
+    
+    if (members.length === 0) {
+      console.log('ERROR: No members found');
+      console.log('Raw response preview:', JSON.stringify(data).substring(0, 200));
+      throw new Error('No members in response');
+    }
 
     // Fetch contact details for ALL members in smaller batches
     const batchSize = 30; // Smaller batches to avoid timeout
