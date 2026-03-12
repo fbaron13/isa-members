@@ -10,10 +10,10 @@ exports.handler = async function(event, context) {
   const API_BASE_URL = 'https://easyverein.com/api/v2.0/member';
 
   try {
-    console.log('Fetching ALL members...');
+    console.log('Fetching members...');
 
-    // Step 1: Get all member IDs first (fast)
-    const response = await fetch(API_BASE_URL + '?limit=1000', {
+    // Use the format that works: ?limit=100
+    const response = await fetch(API_BASE_URL + '?limit=100', {
       headers: {
         'Authorization': 'Bearer ' + API_TOKEN,
         'Accept': 'application/json'
@@ -27,14 +27,13 @@ exports.handler = async function(event, context) {
     const members = await response.json();
     console.log('Got', members.length, 'member records');
 
-    // Step 2: Fetch contact details for ALL members in batches
-    // We'll do 50 at a time to stay under timeout
-    const batchSize = 50;
+    // Fetch contact details for ALL members in smaller batches
+    const batchSize = 30; // Smaller batches to avoid timeout
     const allMembersWithDetails = [];
     
-    for (let i = 0; i < Math.min(members.length, 250); i += batchSize) {
+    for (let i = 0; i < members.length; i += batchSize) {
       const batch = members.slice(i, i + batchSize);
-      console.log('Fetching contact details batch', Math.floor(i / batchSize) + 1, '(members', i, '-', Math.min(i + batchSize, members.length), ')');
+      console.log('Batch', Math.floor(i / batchSize) + 1, ': fetching', batch.length, 'contacts');
       
       const batchWithDetails = await Promise.all(
         batch.map(async (member) => {
@@ -52,7 +51,7 @@ exports.handler = async function(event, context) {
               }
             }
           } catch (error) {
-            console.error('Error fetching contact for member', member.id);
+            // Silent fail for individual contacts
           }
           return member;
         })
@@ -61,7 +60,7 @@ exports.handler = async function(event, context) {
       allMembersWithDetails.push(...batchWithDetails);
     }
 
-    console.log('SUCCESS! Fetched details for', allMembersWithDetails.length, 'members');
+    console.log('SUCCESS! Total members with details:', allMembersWithDetails.length);
 
     return {
       statusCode: 200,
