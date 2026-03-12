@@ -10,17 +10,20 @@ exports.handler = async function(event, context) {
   const API_BASE_URL = 'https://easyverein.com/api/v2.0/member';
 
   try {
-    let allMembers = [];
-    let page = 1;
-    let hasMorePages = true;
+    console.log('Attempting to fetch all members in one request...');
 
-    console.log('Starting to fetch all members with pagination...');
+    // Try to get all members with a very large limit
+    const attempts = [
+      API_BASE_URL + '?limit=1000',
+      API_BASE_URL + '?per_page=1000', 
+      API_BASE_URL + '?pageSize=1000',
+      API_BASE_URL + '?limit=500',
+      API_BASE_URL + '?per_page=500'
+    ];
 
-    // Fetch all pages
-    while (hasMorePages) {
-      const url = API_BASE_URL + '?page=' + page;
-      console.log('Fetching page', page);
-
+    for (const url of attempts) {
+      console.log('Trying:', url);
+      
       const response = await fetch(url, {
         headers: {
           'Authorization': 'Bearer ' + API_TOKEN,
@@ -29,39 +32,53 @@ exports.handler = async function(event, context) {
       });
 
       if (!response.ok) {
-        throw new Error('API returned status ' + response.status);
+        console.log('Failed with status:', response.status);
+        continue;
       }
 
       const data = await response.json();
+      const members = Array.isArray(data) ? data : 
+                     (data.results || data.data || []);
       
-      // Handle different response formats
-      let pageMembers = [];
-      if (Array.isArray(data)) {
-        pageMembers = data;
-      } else if (data.results && Array.isArray(data.results)) {
-        pageMembers = data.results;
-      } else if (data.data && Array.isArray(data.data)) {
-        pageMembers = data.data;
-      }
+      console.log('Got', members.length, 'members');
 
-      console.log('Page', page, 'returned', pageMembers.length, 'members');
-
-      if (pageMembers.length === 0) {
-        console.log('No more members found, stopping pagination');
-        hasMorePages = false;
-      } else {
-        allMembers = allMembers.concat(pageMembers);
-        page++;
+      if (members.length > 5) {
+        // Success! We got more than the default 5
+        console.log('SUCCESS! Using this URL format');
         
-        // Safety limit to prevent infinite loops
-        if (page > 100) {
-          console.log('Reached page limit (100), stopping');
-          hasMorePages = false;
-        }
+        return {
+          statusCode: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS'
+          },
+          body: JSON.stringify(members)
+        };
       }
     }
 
-    console.log('SUCCESS! Total members fetched:', allMembers.length);
+    // If we get here, fall back to pagination with just 3 pages (fast enough)
+    console.log('Falling back to quick pagination (3 pages max)...');
+    
+    let allMembers = [];
+    for (let page = 1; page <= 3; page++) {
+      const response = await fetch(API_BASE_URL + '?page=' + page, {
+        headers: {
+          'Authorization': 'Bearer ' + API_TOKEN,
+          'Accept': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const pageMembers = Array.isArray(data) ? data : (data.results || data.data || []);
+        allMembers = allMembers.concat(pageMembers);
+      }
+    }
+
+    console.log('Partial success:', allMembers.length, 'members (first 3 pages only)');
 
     return {
       statusCode: 200,
@@ -75,7 +92,7 @@ exports.handler = async function(event, context) {
     };
 
   } catch (error) {
-    console.error('Error fetching members:', error.message);
+    console.error('Error:', error.message);
     
     return {
       statusCode: 500,
