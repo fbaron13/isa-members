@@ -1,4 +1,17 @@
 exports.handler = async function(event, context) {
+  // Handle OPTIONS for CORS
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS'
+      },
+      body: ''
+    };
+  }
+
   if (event.httpMethod !== 'GET') {
     return {
       statusCode: 405,
@@ -10,9 +23,9 @@ exports.handler = async function(event, context) {
   const API_BASE_URL = 'https://easyverein.com/api/v2.0/member';
 
   try {
-    console.log('Fetching members...');
+    console.log('=== Starting member fetch ===');
+    console.log('Fetching from:', API_BASE_URL + '?limit=100');
 
-    // Use the format that works: ?limit=100
     const response = await fetch(API_BASE_URL + '?limit=100', {
       headers: {
         'Authorization': 'Bearer ' + API_TOKEN,
@@ -20,36 +33,43 @@ exports.handler = async function(event, context) {
       }
     });
 
+    console.log('Response status:', response.status);
+    console.log('Response headers:', JSON.stringify([...response.headers]));
+
     if (!response.ok) {
-      throw new Error('API returned status ' + response.status);
+      const errorText = await response.text();
+      console.error('API error response:', errorText.substring(0, 500));
+      throw new Error('API returned ' + response.status + ': ' + errorText.substring(0, 100));
     }
 
-    const data = await response.json();
-    console.log('Response type:', typeof data);
-    console.log('Is array?', Array.isArray(data));
-    
-    if (data && typeof data === 'object') {
-      console.log('Response keys:', Object.keys(data));
-      console.log('Has results?', !!data.results);
-      console.log('Has data?', !!data.data);
+    const contentType = response.headers.get('content-type');
+    console.log('Content-Type:', contentType);
+
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('Expected JSON but got:', text.substring(0, 200));
+      throw new Error('API returned non-JSON response');
     }
-    
-    const members = Array.isArray(data) ? data : (data.results || data.data || []);
-    console.log('Got', members.length, 'member records');
-    
-    if (members.length === 0) {
-      console.log('ERROR: No members found');
-      console.log('Raw response preview:', JSON.stringify(data).substring(0, 200));
+
+    const members = await response.json();
+    console.log('Parsed JSON successfully');
+    console.log('Type of response:', typeof members);
+    console.log('Is array?', Array.isArray(members));
+    console.log('Member count:', members.length);
+
+    if (!Array.isArray(members) || members.length === 0) {
+      console.error('Invalid response format');
       throw new Error('No members in response');
     }
 
-    // Fetch contact details for ALL members in smaller batches
-    const batchSize = 30; // Smaller batches to avoid timeout
+    // Fetch contact details in batches
+    console.log('Fetching contact details...');
+    const batchSize = 30;
     const allMembersWithDetails = [];
     
     for (let i = 0; i < members.length; i += batchSize) {
       const batch = members.slice(i, i + batchSize);
-      console.log('Batch', Math.floor(i / batchSize) + 1, ': fetching', batch.length, 'contacts');
+      console.log('Batch', Math.floor(i / batchSize) + 1, '/', Math.ceil(members.length / batchSize));
       
       const batchWithDetails = await Promise.all(
         batch.map(async (member) => {
@@ -67,7 +87,7 @@ exports.handler = async function(event, context) {
               }
             }
           } catch (error) {
-            // Silent fail for individual contacts
+            console.error('Contact fetch error for member', member.id, ':', error.message);
           }
           return member;
         })
@@ -76,7 +96,8 @@ exports.handler = async function(event, context) {
       allMembersWithDetails.push(...batchWithDetails);
     }
 
-    console.log('SUCCESS! Total members with details:', allMembersWithDetails.length);
+    console.log('=== Success ===');
+    console.log('Total members with details:', allMembersWithDetails.length);
 
     return {
       statusCode: 200,
@@ -90,7 +111,10 @@ exports.handler = async function(event, context) {
     };
 
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error('=== ERROR ===');
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
     
     return {
       statusCode: 500,
@@ -100,7 +124,8 @@ exports.handler = async function(event, context) {
       },
       body: JSON.stringify({ 
         error: 'Failed to fetch members',
-        message: error.message 
+        message: error.message,
+        type: error.name
       })
     };
   }
