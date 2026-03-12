@@ -105,6 +105,13 @@ exports.handler = async function(event, context) {
     );
 
     console.log('SUCCESS! Fetched details for', membersWithDetails.length, 'members');
+    
+    // Log first member's contact details for debugging
+    if (membersWithDetails[0] && membersWithDetails[0].contactDetailsData) {
+      console.log('First member contactDetailsData:', JSON.stringify(membersWithDetails[0].contactDetailsData, null, 2));
+    } else {
+      console.log('WARNING: contactDetailsData is missing or empty');
+    }
 
     return {
       statusCode: 200,
