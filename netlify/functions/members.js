@@ -7,107 +7,86 @@ exports.handler = async function(event, context) {
   }
 
   const API_TOKEN = '67ee65a0c5ae7ccfa2c9fb147cbc373a15b23614';
-  
-  // Try different API versions and authentication formats
-  const attempts = [
-    // v2.0 attempts
-    {
-      version: 'v2.0',
-      url: 'https://easyverein.com/api/v2.0/member',
-      authHeader: 'Token ' + API_TOKEN
-    },
-    {
-      version: 'v2.0',
-      url: 'https://easyverein.com/api/v2.0/member',
-      authHeader: 'Bearer ' + API_TOKEN
-    },
-    {
-      version: 'v2.0',
-      url: 'https://easyverein.com/api/v2.0/member',
-      authHeader: API_TOKEN
-    },
-    // v1.7 attempts
-    {
-      version: 'v1.7',
-      url: 'https://easyverein.com/api/v1.7/member',
-      authHeader: 'Token ' + API_TOKEN
-    },
-    {
-      version: 'v1.7',
-      url: 'https://easyverein.com/api/v1.7/member',
-      authHeader: 'Bearer ' + API_TOKEN
-    },
-    {
-      version: 'v1.7',
-      url: 'https://easyverein.com/api/v1.7/member',
-      authHeader: API_TOKEN
-    }
-  ];
+  const API_BASE_URL = 'https://easyverein.com/api/v2.0/member';
 
-  for (const attempt of attempts) {
-    try {
-      console.log('Trying:', attempt.version, 'with auth format:', 
-        attempt.authHeader.startsWith('Token') ? 'Token <key>' : 
-        attempt.authHeader.startsWith('Bearer') ? 'Bearer <key>' : 
-        '<key>');
-      
-      const response = await fetch(attempt.url, {
+  try {
+    let allMembers = [];
+    let page = 1;
+    let hasMorePages = true;
+
+    console.log('Starting to fetch all members with pagination...');
+
+    // Fetch all pages
+    while (hasMorePages) {
+      const url = API_BASE_URL + '?page=' + page;
+      console.log('Fetching page', page);
+
+      const response = await fetch(url, {
         headers: {
-          'Authorization': attempt.authHeader,
+          'Authorization': 'Bearer ' + API_TOKEN,
           'Accept': 'application/json'
         }
       });
 
-      console.log('Response status:', response.status);
-
-      if (response.status === 401) {
-        console.log('401 - trying next format');
-        continue;
-      }
-
       if (!response.ok) {
-        console.log('Failed with status:', response.status);
-        const errorText = await response.text();
-        console.log('Error response:', errorText.substring(0, 200));
-        continue;
+        throw new Error('API returned status ' + response.status);
       }
 
       const data = await response.json();
-      const memberCount = Array.isArray(data) ? data.length : 
-                         (data.results ? data.results.length : 'unknown');
       
-      console.log('SUCCESS! Version:', attempt.version, 'Members:', memberCount);
+      // Handle different response formats
+      let pageMembers = [];
+      if (Array.isArray(data)) {
+        pageMembers = data;
+      } else if (data.results && Array.isArray(data.results)) {
+        pageMembers = data.results;
+      } else if (data.data && Array.isArray(data.data)) {
+        pageMembers = data.data;
+      }
 
-      return {
-        statusCode: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type',
-          'Access-Control-Allow-Methods': 'GET, OPTIONS'
-        },
-        body: JSON.stringify(data)
-      };
+      console.log('Page', page, 'returned', pageMembers.length, 'members');
 
-    } catch (error) {
-      console.error('Error:', error.message);
+      if (pageMembers.length === 0) {
+        console.log('No more members found, stopping pagination');
+        hasMorePages = false;
+      } else {
+        allMembers = allMembers.concat(pageMembers);
+        page++;
+        
+        // Safety limit to prevent infinite loops
+        if (page > 100) {
+          console.log('Reached page limit (100), stopping');
+          hasMorePages = false;
+        }
+      }
     }
-  }
 
-  // All attempts failed
-  console.error('All authentication formats failed');
-  
-  return {
-    statusCode: 500,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*'
-    },
-    body: JSON.stringify({ 
-      error: 'Authentication failed with all formats',
-      message: 'Please verify the API token is correct and active in easyverein settings',
-      tried: ['Token', 'Bearer', 'plain key'],
-      versions: ['v2.0', 'v1.7']
-    })
-  };
+    console.log('SUCCESS! Total members fetched:', allMembers.length);
+
+    return {
+      statusCode: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS'
+      },
+      body: JSON.stringify(allMembers)
+    };
+
+  } catch (error) {
+    console.error('Error fetching members:', error.message);
+    
+    return {
+      statusCode: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: JSON.stringify({ 
+        error: 'Failed to fetch members',
+        message: error.message 
+      })
+    };
+  }
 };
